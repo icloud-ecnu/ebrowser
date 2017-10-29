@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Implementation-Title: hello-maven
+Implementation-Version: 0.0.1-SNAPSHOT
+Built-By: shuai
+Implementation-Vendor-Id: com.tszang
+Build-Jdk: 1.8.0_111
+Implementation-URL: http://projects.spring.io/spring-boot/hello-maven/
+Created-By: Maven Integration for Eclipse
+Implementation-Vendor: Pivotal Software, Inc.
+
