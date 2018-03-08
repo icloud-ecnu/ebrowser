@@ -8,12 +8,11 @@
 
 <resources>
     <string name="url_hint">Type URL Here</string>
-    <string name="minus">-2</string>
-    <string name="plus">+2</string>
     <string name="reset">Reset</string>
-    <string name="fps">10</string>
+    <string name="fps">0</string>
+    <string name="fpsTag">add tps:</string>
     <string name="text_bushuang">0</string>
-    <string name="bushuang">FeedbackScrolling</string>
-    <string name="feedback">FeedbackPinching</string>
+    <string name="bushuang">FBScroll</string>
+    <string name="feedback">dissatisfaction</string>
     <string name="savePower">start</string>
 </resources>

@@ -90,10 +90,11 @@ class CONTENT_EXPORT InputHandlerManager {
                                 ui::ScopedWebInputEvent input_event,
                                 const ui::LatencyInfo& latency_info,
                                 const InputEventAckStateCallback& callback);
-// Called from the compositor's thread.
-  virtual void HandleInputModelInfoMsg(int routing_id,std::string msg,int speed);
-
-
+  // my code
+  // Called from the compositor's thread.
+  virtual void HandleInputModelStrMsg(int routing_id,std::string model);
+  virtual void HandleInputModelParamsMsg(int routing_id, int speed, float entropy);
+  // end
   // Called from the compositor's thread.
   void DidOverscroll(int routing_id, const ui::DidOverscrollParams& params);
 

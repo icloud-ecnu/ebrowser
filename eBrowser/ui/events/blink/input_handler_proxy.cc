@@ -54,7 +54,7 @@ const float kScrollEpsilon = 0.1f;
 // two to accumulate.
 const double kMinBoostFlingSpeedSquare = 350. * 350.;
 
-// Minimum velocity for the active touch scroll to preserve (boost) an activef
+// Minimum velocity for the active touch scroll to preserve (boost) an active
 // fling for which cancellation has been deferred.
 const double kMinBoostTouchScrollSpeedSquare = 150 * 150.;
 
@@ -64,34 +64,6 @@ const double kMinBoostTouchScrollSpeedSquare = 150 * 150.;
 // slightly increased value to accomodate small IPC message delays.
 const double kFlingBoostTimeoutDelaySeconds = 0.05;
 
-
-//-----------------modify start
-double start_point_x = 0;
-double start_point_y = 0;
-
-double start_point_x_ = 0;
-double start_point_y_ = 0;
-
-double accumulated_delta_x = 0;
-double accumulated_delta_y = 0;
-
-double accumulated_delta_x_ = 0;
-double accumulated_delta_y_ = 0;
-/*
-float  accumulated_scale = 1;
-double pinch_point_x = 0;
-double pinch_point_y = 0;*/
-int pinchCount = 0;
-int scrollCount = 0;
-int fps = 0;
-bool isPinch = false;
-//WebGestureEvent update_event;
-//float vy = 0;
-
-
-
-
-//----------------modify end
 gfx::Vector2dF ToClientScrollIncrement(const WebFloatSize& increment) {
   return gfx::Vector2dF(-increment.width, -increment.height);
 }
@@ -105,8 +77,6 @@ bool ShouldSuppressScrollForFlingBoosting(
     const WebGestureEvent& scroll_update_event,
     double time_since_last_boost_event,
     double time_since_last_fling_animate) {
-
-  //return false;//----------------------------------------------
   DCHECK_EQ(WebInputEvent::GestureScrollUpdate, scroll_update_event.type);
 
   gfx::Vector2dF dx(scroll_update_event.data.scrollUpdate.deltaX,
@@ -132,7 +102,6 @@ bool ShouldSuppressScrollForFlingBoosting(
 
 bool ShouldBoostFling(const gfx::Vector2dF& current_fling_velocity,
                       const WebGestureEvent& fling_start_event) {
-  //return false;
   DCHECK_EQ(WebInputEvent::GestureFlingStart, fling_start_event.type);
 
   gfx::Vector2dF new_fling_velocity(
@@ -151,7 +120,6 @@ bool ShouldBoostFling(const gfx::Vector2dF& current_fling_velocity,
   return true;
 }
 
-//用当前的event构建一个GestureScrollBegin的event
 WebGestureEvent ObtainGestureScrollBegin(const WebGestureEvent& event) {
   WebGestureEvent scroll_begin_event = event;
   scroll_begin_event.type = WebInputEvent::GestureScrollBegin;
@@ -159,10 +127,9 @@ WebGestureEvent ObtainGestureScrollBegin(const WebGestureEvent& event) {
   scroll_begin_event.data.scrollBegin.deltaYHint = 0;
   return scroll_begin_event;
 }
-//创建ScrollState
+
 cc::ScrollState CreateScrollStateForGesture(const WebGestureEvent& event) {
   cc::ScrollStateData scroll_state_data;
-  //LOG(INFO)<<"CreateScrollStateForGesture------------";
   switch (event.type) {
     case WebInputEvent::GestureScrollBegin:
       scroll_state_data.position_x = event.x;
@@ -176,12 +143,12 @@ cc::ScrollState CreateScrollStateForGesture(const WebGestureEvent& event) {
       }
       break;
     case WebInputEvent::GestureFlingStart:
-      scroll_state_data.velocity_x = event.data.flingStart.velocityX;//event.data.flingStart.velocityX
-      scroll_state_data.velocity_y = event.data.flingStart.velocityY;//
+      scroll_state_data.velocity_x = event.data.flingStart.velocityX;
+      scroll_state_data.velocity_y = event.data.flingStart.velocityY;
       scroll_state_data.is_in_inertial_phase = true;
       break;
     case WebInputEvent::GestureScrollUpdate:
-      scroll_state_data.delta_x = -event.data.scrollUpdate.deltaX;//-------------------重点
+      scroll_state_data.delta_x = -event.data.scrollUpdate.deltaX;
       scroll_state_data.delta_y = -event.data.scrollUpdate.deltaY;
       scroll_state_data.velocity_x = event.data.scrollUpdate.velocityX;
       scroll_state_data.velocity_y = event.data.scrollUpdate.velocityY;
@@ -209,7 +176,7 @@ void ReportInputEventLatencyUma(const WebInputEvent& event,
         event.type == WebInputEvent::GestureFlingStart)) {
     return;
   }
-  //LOG(INFO)<<"ReportInputEventLatencyUma----------------------";
+
   ui::LatencyInfo::LatencyMap::const_iterator it =
       latency_info.latency_components().find(std::make_pair(
           ui::INPUT_EVENT_LATENCY_ORIGINAL_COMPONENT, 0));
@@ -252,7 +219,7 @@ void ReportInputEventLatencyUma(const WebInputEvent& event,
     }
   }
 }
-//滚轮输入还是触摸屏输入
+
 cc::InputHandler::ScrollInputType GestureScrollInputType(
     blink::WebGestureDevice device) {
   return device == blink::WebGestureDeviceTouchpad
@@ -260,14 +227,32 @@ cc::InputHandler::ScrollInputType GestureScrollInputType(
              : cc::InputHandler::TOUCHSCREEN;
 }
 
+  
 }  // namespace
 
 namespace ui {
+//My code
+std::string modelStr = "";
+int gestureSpeed = 0;
+float pageEntropy = 0;
+void InputHandlerProxy::HandleInputModelStrMsg(int routing_id, std::string model){
+    if(model.length()!=0){
+      modelStr = model;
+    }
+    LOG(INFO)<<"get message routing_id:"<<routing_id<<" content:"<<modelStr;
+}
 
+void InputHandlerProxy::HandleInputModelParamsMsg(int routing_id, int speed, float entropy){
+    gestureSpeed = speed;
+    pageEntropy = entropy;
+    //LOG(INFO)<<"gestureSpeed:"<<speed<<" pageEntropy:"<<entropy;
+}
+
+//end
 InputHandlerProxy::InputHandlerProxy(cc::InputHandler* input_handler,
                                      InputHandlerProxyClient* client)
-    : client_(client), //ThreadProxy
-      input_handler_(input_handler), //LayerTreeHostImpl
+    : client_(client),
+      input_handler_(input_handler),
       deferred_fling_cancel_time_seconds_(0),
       synchronous_input_handler_(nullptr),
       allow_root_animate_(true),
@@ -302,70 +287,12 @@ void InputHandlerProxy::WillShutdown() {
   client_->WillShutdown();
 }
 
-
-//svm
-
-
-std::string msg_model;
-int routing_id_ = 0;
-int scrollSpeed = 0;
-int countScrolling = 0;
-int countPinching = 0;
-std::string webviewmodel = "svm_type epsilon_svr\n"
-"kernel_type rbf\n"
-"gamma 0.1\n"
-"nr_class 2\n"
-"total_sv 31\n"
-"rho -30.064\n"
-"SV\n"
-"-375.1906993292752 1:0.4\n" 
-"-1000 1:0.5\n" 
-"76.88789430911002 1:0.9\n" 
-"1000 1:1\n" 
-"1000 1:1.1\n" 
-"1000 1:1.3\n" 
-"-1000 1:1.5\n" 
-"-1000 1:2\n" 
-"152.4244333825901 1:2.8\n" 
-"-658.9273041510949 1:3.6\n" 
-"1000 1:4\n" 
-"110.2583412231241 1:4.8\n" 
-"-1000 1:5.6\n" 
-"1000 1:6\n" 
-"-1000 1:6.8\n" 
-"497.4609352251786 1:7.6\n" 
-"1000 1:8\n" 
-"-1000 1:8.8\n" 
-"-816.4934305923082 1:9.6\n" 
-"1000 1:10\n" 
-"471.5388027392294 1:11\n" 
-"-1000 1:12\n" 
-"771.8231997159018 1:13\n" 
-"-276.2898550887135 1:14\n" 
-"36.63110800575065 1:16\n" 
-"6.134237008088796 1:18\n" 
-"-13.2777632498265 1:20\n" 
-"16.39637833119732 1:21\n" 
-"-2.474188188578108 1:23\n" 
-"3.300645387053644 1:25\n" 
-"-0.202734727425062 1:28";
-
-void InputHandlerProxy::HandleInputModelMsg(std::string msg,int routing_id,int speed){
-    LOG(INFO)<<"HandleInputModelMsg-------------------"<<msg;
-    routing_id_ = routing_id;
-    if(msg!=""&&msg.length()!=0){msg_model = msg;}
-    speed = speed==0?200:speed;
-    scrollSpeed = speed;
-    LOG(INFO)<<"Speed now: "<<scrollSpeed;
-}
-
-
 void InputHandlerProxy::HandleInputEventWithLatencyInfo(
     ScopedWebInputEvent event,
     const LatencyInfo& latency_info,
     const EventDispositionCallback& callback) {
   DCHECK(input_handler_);
-  //LOG(INFO)<<"HandleInputEventWithLatencyInfo-------------------";
+
   if (uma_latency_reporting_enabled_)
     ReportInputEventLatencyUma(*event, latency_info);
 
@@ -380,19 +307,17 @@ void InputHandlerProxy::HandleInputEventWithLatencyInfo(
           &monitored_latency_info);
 
   current_overscroll_params_.reset();
-  //主要是将参数event描述的输入事件分给另外一个成员函数HandleInputEvent处理
   InputHandlerProxy::EventDisposition disposition = HandleInputEvent(*event);
   callback.Run(disposition, std::move(event), monitored_latency_info,
                std::move(current_overscroll_params_));
 }
 
+
 InputHandlerProxy::EventDisposition InputHandlerProxy::HandleInputEvent(
     const WebInputEvent& event) {
-
   DCHECK(input_handler_);
-  //LOG(INFO)<<"InputHandlerProxy::HandleInputEvent--------distribute a handle function to event";
-
-  if (FilterInputEventForFlingBoosting(event))//?true
+  //LOG(INFO)<<"In function------------HandleInputEvent";
+  if (FilterInputEventForFlingBoosting(event))
     return DID_HANDLE;
 
   switch (event.type) {
@@ -404,31 +329,22 @@ InputHandlerProxy::EventDisposition InputHandlerProxy::HandleInputEvent(
           static_cast<const WebGestureEvent&>(event));
 
     case WebInputEvent::GestureScrollUpdate:
-          scrollCount += 1;
-          //LOG(INFO)<<"滚动次数："<<scrollCount;
-          
-          //base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(24163));
-      return HandleGestureScrollUpdate(static_cast<const WebGestureEvent&>(event));
+      return HandleGestureScrollUpdate(
+          static_cast<const WebGestureEvent&>(event));
 
     case WebInputEvent::GestureScrollEnd:
       return HandleGestureScrollEnd(static_cast<const WebGestureEvent&>(event));
 
     case WebInputEvent::GesturePinchBegin: {
-      //----------start
-	isPinch = true;
-      //----------end
       DCHECK(!gesture_pinch_on_impl_thread_);
-      //WebInputEvent => WebGestureEvent
       const WebGestureEvent& gesture_event =
           static_cast<const WebGestureEvent&>(event);
-      //看else不看if
       if (gesture_event.sourceDevice == blink::WebGestureDeviceTouchpad &&
           input_handler_->GetEventListenerProperties(
               cc::EventListenerClass::kMouseWheel) !=
               cc::EventListenerProperties::kNone) {
         return DID_NOT_HANDLE;
       } else {
-	//LOG(INFO)<<"+++++++++++++++++++++++++++++++++GesturePinchBegin";
         input_handler_->PinchGestureBegin();
         gesture_pinch_on_impl_thread_ = true;
         return DID_HANDLE;
@@ -436,17 +352,8 @@ InputHandlerProxy::EventDisposition InputHandlerProxy::HandleInputEvent(
     }
 
     case WebInputEvent::GesturePinchEnd:
-      //----------start
-	isPinch = false;
-      //----------end
       if (gesture_pinch_on_impl_thread_) {
         gesture_pinch_on_impl_thread_ = false;
-	pinchCount = 0;
-	//LOG(INFO)<<"+++++++++++++++++++++++++++++++++GesturePinchEnd";
-//---
-	/*input_handler_->PinchGestureUpdate(accumulated_scale,gfx::Point(pinch_point_x, pinch_point_y));
-	accumulated_scale = 1;*/
-//---
         input_handler_->PinchGestureEnd();
         return DID_HANDLE;
       } else {
@@ -455,102 +362,22 @@ InputHandlerProxy::EventDisposition InputHandlerProxy::HandleInputEvent(
 
     case WebInputEvent::GesturePinchUpdate: {
       if (gesture_pinch_on_impl_thread_) {
-      double fps = 0.0213*scrollSpeed+15.6;
-      scrollSpeed = 0;
-      //LOG(INFO)<<"+++++++++++++++++++++++++++++PinchSpeed:"<<scrollSpeed;
-      fps = ceil(fps);
-      //LOG(INFO)<<"+++++++++++++++++++++++++++++fps-predict:"<<fps;
-      if(fps<10){fps = 10;}if(fps>60){fps = 60;}
-      countPinching++;
-      //LOG(INFO)<<"+++++++++++++++++++++++++++++pinch-fps:"<<fps;
-      //LOG(INFO)<<"+++++++++++++++++++++++++++++pinch-predict-fps:"<<fps<<" Time:"<<time(NULL)<<" count: "<<countPinching;
-      if(fps >= 1 && fps <= 9){
-       base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(1000000/fps - 16667));
-        //LOG(INFO)<<"当前pinch-fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(1000000/fps - 16667);
-      }
-
-      if(fps >= 10 && fps <= 15){
-        base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(1000000/fps - 16667+(fps-10)*1667*0.75));
-        //LOG(INFO)<<"当前pinch-fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(1000000/fps - 16667+(fps-10)*1667*0.75);
-      }
-      else if(fps > 15 && fps < 20){
-	
-        base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(1000000/fps - 16667+(fps-10)*1667*0.6));
-        //LOG(INFO)<<"当前pinch-fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(1000000/fps - 16667+(fps-10)*1667*0.6);//0.4
-      }       
-      else if(fps >=20 && fps <= 30){
-	//base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(24997));
-        base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(24997+1667*(30-fps)));
-        //LOG(INFO)<<"当前pinch-fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(24997+1667*(30-fps));
-      }
-      else if(fps >30 && fps<=41){
-       base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(16663+1667*(41-fps)*0.5));
-       //LOG(INFO)<<"当前pinch-fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(16663+1667*(41-fps)*0.5);
-      }
-
-      else if(fps>41 && fps<=44){
-       //base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(24997+1667*(30-fps)));
-       //base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(1000000/fps - 16667));
-       base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(16246+1667*(44-fps)*0.5));
-       //LOG(INFO)<<"当前pinch-fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(16246+1667*(44-fps)*0.5);
-      } //till 45
-      else if(fps==45){
-       base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(15412));
-       //LOG(INFO)<<"当前fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(15412);
-      }
-      else if(fps>45 && fps <=52){
-       base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(11245+1667*(52-fps)*0.5));
-       //LOG(INFO)<<"当前pinch-fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(11245+1667*(52-fps)*0.5);
-      }
-      else if(fps==55){//52 15412
-       base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(12912));
-       //LOG(INFO)<<"当前pinch-fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(12912);
-      }
-     else if(fps == 60){
-       base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(0));
-       //LOG(INFO)<<"当前pinch-fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(0);
-      }
-      else{
-       base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(12912+1667*(55-fps)*0.5));
-       //LOG(INFO)<<"当前pinch-fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(12912+1667*(55-fps)*0.5);
-      }
-	pinchCount++;
-	//LOG(INFO)<<pinchCount<<"+++++++++++++++++++++++++++++++++GesturePinchUpdate";
-	/*
-	if(pinchCount){
-		return DROP_EVENT;	
-	}*/
-        const WebGestureEvent& gesture_event = static_cast<const WebGestureEvent&>(event);
+        const WebGestureEvent& gesture_event =
+            static_cast<const WebGestureEvent&>(event);
         if (gesture_event.data.pinchUpdate.zoomDisabled)
             return DROP_EVENT;
-
-	//把参数累计一下，在end事件中调用
-	/*LOG(INFO)<<"scale:"<<gesture_event.data.pinchUpdate.scale<<"-x:"<<gesture_event.x<<"-y:"<<gesture_event.y;
-	accumulated_scale *= gesture_event.data.pinchUpdate.scale;
-	pinch_point_x = gesture_event.x;
-	pinch_point_y = gesture_event.y;
-	LOG(INFO)<<"accumulated_scale:"<<accumulated_scale;*/
-	//below is initial source code
-        //LOG(INFO)<<pinchCount<<"+++++++++++++++++++++++++++++++++GesturePinchUpdate-scale: "<<gesture_event.data.pinchUpdate.scale;
-	input_handler_->PinchGestureUpdate(gesture_event.data.pinchUpdate.scale,gfx::Point(gesture_event.x, gesture_event.y));
-
+        input_handler_->PinchGestureUpdate(
+            gesture_event.data.pinchUpdate.scale,
+            gfx::Point(gesture_event.x, gesture_event.y));
         return DID_HANDLE;
-      } 
-	else {
+      } else {
         return DID_NOT_HANDLE;
       }
     }
 
     case WebInputEvent::GestureFlingStart:
-      //
-      #ifndef NDEBUG
-  expect_scroll_update_end_ = false;
-#endif
-      //
-      //LOG(INFO)<<"HandleGestureFlingStart";return DID_NOT_HANDLE;
-/*
       return HandleGestureFlingStart(
-          *static_cast<const WebGestureEvent*>(&event));*/
+          *static_cast<const WebGestureEvent*>(&event));
 
     case WebInputEvent::GestureFlingCancel:
       if (CancelCurrentFling())
@@ -790,37 +617,11 @@ InputHandlerProxy::EventDisposition InputHandlerProxy::ScrollByMouseWheel(
     }
   }
 }
-//滚动开始
+
 InputHandlerProxy::EventDisposition InputHandlerProxy::HandleGestureScrollBegin(
     const WebGestureEvent& gesture_event) {
-  //---------start
-  /*
-  if(isPinch){
-    return DROP_EVENT;
-  }
-  */
-  //LOG(INFO)<<"ScrollBegin---------HandleGestureScrollBegin"<<gesture_event.x<<gesture_event.y;
-  if((gesture_event.x ==-1&&gesture_event.y==-1)){
-  	fps = gesture_event.timeStampSeconds*1000;
-       // LOG(INFO)<<"---------ScrollBegin--X"<<gesture_event.x<<"---Y---"<<gesture_event.y<<"fps:"<<fps;
-        return DROP_EVENT;
-  }
-  if((gesture_event.x ==0&&gesture_event.y==0)){
-  	fps = gesture_event.timeStampSeconds*1000;
-        //LOG(INFO)<<"---------ScrollBegin--X"<<gesture_event.x<<"---Y---"<<gesture_event.y<<"fps:"<<fps;
-        return DROP_EVENT;
-  }
-  //---------end
   if (gesture_scroll_on_impl_thread_)
     CancelCurrentFling();
-
-  //LOG(INFO)<<"ScrollBegin---------HandleGestureScrollBegin"<<time(NULL);
-  
-
-  //------modify start
-  start_point_x = gesture_event.x;
-  start_point_y = gesture_event.y;
-  //------modify end
 
 #ifndef NDEBUG
   DCHECK(!expect_scroll_update_end_);
@@ -829,21 +630,19 @@ InputHandlerProxy::EventDisposition InputHandlerProxy::HandleGestureScrollBegin(
   cc::ScrollState scroll_state = CreateScrollStateForGesture(gesture_event);
   cc::InputHandler::ScrollStatus scroll_status;
   if (gesture_event.data.scrollBegin.deltaHintUnits ==
-      blink::WebGestureEvent::ScrollUnits::Page) { //page (visible viewport) based scrolling
+      blink::WebGestureEvent::ScrollUnits::Page) {
     scroll_status.thread = cc::InputHandler::SCROLL_ON_MAIN_THREAD;
     scroll_status.main_thread_scrolling_reasons =
         cc::MainThreadScrollingReason::kContinuingMainThreadScroll;
-  } else if (gesture_event.data.scrollBegin.targetViewport) {//scroll the viewport if true
+  } else if (gesture_event.data.scrollBegin.targetViewport) {
     scroll_status = input_handler_->RootScrollBegin(
         &scroll_state, GestureScrollInputType(gesture_event.sourceDevice));
   } else if (ShouldAnimate(gesture_event.data.scrollBegin.deltaHintUnits !=
-                           blink::WebGestureEvent::ScrollUnits::Pixels)) {//large pixel jump should animate to delta
+                           blink::WebGestureEvent::ScrollUnits::Pixels)) {
     DCHECK(!scroll_state.is_in_inertial_phase());
-    //LOG(INFO)<<"---------ScrollAnimatedBegin--X"<<gesture_event.x<<"---Y---"<<gesture_event.y;
     gfx::Point scroll_point(gesture_event.x, gesture_event.y);
     scroll_status = input_handler_->ScrollAnimatedBegin(scroll_point);
   } else {
-    //LOG(INFO)<<"---------滚动非Page非Viewport非Animate--X"<<gesture_event.x<<"---Y---"<<gesture_event.y;
     scroll_status = input_handler_->ScrollBegin(
         &scroll_state, GestureScrollInputType(gesture_event.sourceDevice));
   }
@@ -879,236 +678,111 @@ InputHandlerProxy::EventDisposition InputHandlerProxy::HandleGestureScrollBegin(
 }
 
 
-double webview_predict(double speed)
-{
-     //LOG(INFO)<<"执行到了predict";
-     //LOG(INFO)<<webviewmodel;
-     //LOG(INFO)<<"执行到了predict-------------------"<<msg_model;
-     /**如果msg_model不存在返回60*/
-//----
-    if(webviewmodel==""||webviewmodel.length()==0||webviewmodel=="stop"){return 60;}
-//----
-    struct svm_node *x;
-    int max_nr_attr = 64;
-    struct svm_model* model;
-    int predict_probability=0;
-    if((model=svm_load_model(webviewmodel.data()))==0)
-    {
-	LOG(INFO)<<"+++++++++++++++++++++++++++++fps30:"<<"can't load model string";
-	exit(1);
-    }
 
-	x = (struct svm_node *) malloc(max_nr_attr*sizeof(struct svm_node));
-	if(model==NULL){LOG(INFO)<<"模型不存在";}
-	if(predict_probability)
-	{
-		if(svm_check_probability_model(model)==0)
-		{
-			LOG(INFO)<<"+++++++++++++++++++++++++++++fps30:"<<"Model does not support probabiliy estimates";
-			exit(1);
-		}
-	}
-	else
-	{
-		if(svm_check_probability_model(model)!=0)
-		{
-		LOG(INFO)<<"+++++++++++++++++++++++++++++fps30:"<<"Model supports probability estimates, but disabled in prediction";
-		}			
-	}
-	//LOG(INFO)<<"执行到了predict";
-        int i = 0;
-        //double target_label, predict_label;
-	double predict_label;
-        //int inst_max_index = -1;
-        //target_label = 0;
-        x[i].index = 1;
-        //inst_max_index = x[i].index;
-        x[i].value = speed;
-        ++i;
-        x[i].index = -1;
-	//LOG(INFO)<<"执行到了predict";
-        predict_label = svm_predict(model,x);
-	svm_free_and_destroy_model(&model);
-        free(x);
-        return predict_label;
-}
 
+//my code
 double predict(double speed)
 {
-     LOG(INFO)<<"执行到了predict";
-     //LOG(INFO)<<"执行到了predict-------------------"<<msg_model;
-     /**如果msg_model不存在返回60*/
-//----
-    if(msg_model==""||msg_model.length()==0||msg_model=="stop"){return 60;}
-//----
-    struct svm_node *x;
-    int max_nr_attr = 64;
-    struct svm_model* model;
-    int predict_probability=0;
-    if((model=svm_load_model(msg_model.data()))==0)
+  LOG(INFO)<<"here is func predict-------------------";
+
+  if( modelStr.length() == 0 || modelStr == "stop" ){
+    return 60;
+  }
+
+  struct svm_node *x;
+  int max_nr_attr = 64;
+  struct svm_model* model;
+  int predict_probability=0;
+  if((model = svm_load_model(modelStr.data())) == 0)
+  {
+    LOG(INFO)<<"here is func predict-------------------"<<"can't load model string";
+    exit(1);
+  }
+  x = (struct svm_node *) malloc(max_nr_attr*sizeof(struct svm_node));
+  if(x == NULL){
+    LOG(INFO)<<"here is func predict-------------------"<<"can't malloc svm_node";
+  }
+  if(predict_probability)
+  {
+    if(svm_check_probability_model(model) == 0)
     {
-	LOG(INFO)<<"+++++++++++++++++++++++++++++fps30:"<<"can't load model string";
-	exit(1);
+      LOG(INFO)<<"here is func predict-------------------"<<"Model does not support probabiliy estimates";
+      exit(1);
     }
-        LOG(INFO)<<"执行到了predict";
-	x = (struct svm_node *) malloc(max_nr_attr*sizeof(struct svm_node));
-	if(model==NULL){LOG(INFO)<<"模型不存在";}
-	if(predict_probability)
-	{
-		if(svm_check_probability_model(model)==0)
-		{
-			LOG(INFO)<<"+++++++++++++++++++++++++++++fps30:"<<"Model does not support probabiliy estimates";
-			exit(1);
-		}
-	}
-	else
-	{
-		if(svm_check_probability_model(model)!=0)
-		{
-		LOG(INFO)<<"+++++++++++++++++++++++++++++fps30:"<<"Model supports probability estimates, but disabled in prediction";
-		}			
-	}
-	
-        int i = 0;
-        //double target_label, predict_label;
-	double predict_label;
-        //int inst_max_index = -1;
-        //target_label = 0;
-        x[i].index = 1;
-        //inst_max_index = x[i].index;
-        x[i].value = speed;
-        ++i;
-        x[i].index = -1;
-	LOG(INFO)<<"执行到了predict";
-        predict_label = svm_predict(model,x);
-	svm_free_and_destroy_model(&model);
-        free(x);
-        LOG(INFO)<<"执行到了predict"<<predict_label;
-        return predict_label;
+  }
+  else
+  {
+    if(svm_check_probability_model(model)!=0)
+    {
+      LOG(INFO)<<"here is func predict-------------------"<<"Model supports probability estimates, but disabled in prediction";
+    }     
+  }
+
+  int i = 0;
+  double predict_label;
+  x[i].index = 1;
+  x[i].value = speed;
+  ++i;
+  x[i].index = -1;
+  predict_label = svm_predict(model,x);
+  svm_free_and_destroy_model(&model);
+  free(x);
+  return predict_label;
 }
 
-//滚动更新
-int count = 0;
-int last_fps  = 0;
+void doSleep(int fps){
+    if(fps >= 1 && fps <= 9){
+       base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(1000000/fps - 16667));
+     }
+
+    if(fps >= 10 && fps <= 15){
+      base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(1000000/fps - 16667+(fps-10)*1667*0.75));
+    }
+    else if(fps > 15 && fps < 20){
+      base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(1000000/fps - 16667+(fps-10)*1667*0.6));
+    }       
+    else if(fps >=20 && fps <= 30){
+      base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(24997+1667*(30-fps)));
+    }
+    else if(fps >30 && fps<=41){
+     base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(16663+1667*(41-fps)*0.5));
+    }
+    else if(fps>41 && fps<=44){
+     base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(16246+1667*(44-fps)*0.5));
+    }
+    else if(fps==45){
+     base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(15412));
+    }
+    else if(fps>45 && fps <=52){
+     base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(11245+1667*(52-fps)*0.5));
+    }
+    else if(fps==55){
+     base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(12912));
+    }
+    else if(fps == 60){}
+    else{
+     base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(12912+1667*(55-fps)*0.5));
+    }
+}
+//my code end
+
 InputHandlerProxy::EventDisposition
 InputHandlerProxy::HandleGestureScrollUpdate(
     const WebGestureEvent& gesture_event) {
-      
-      //float v = fabs(gesture_event.data.flingStart.velocityY);
-      //float v1 = fabs(gesture_event.data.scrollUpdate.velocityY);
-      //float d1 = fabs(gesture_event.data.scrollUpdate.deltaY);
-      //LOG(INFO)<<"当前速度:"<<v; LOG(INFO)<<"当前速度1:"<<v1; LOG(INFO)<<"当前delta:"<<d1;
-      /***eScroll Start***/
-      double fps;
-      scrollSpeed = scrollSpeed/50;	
- //-----fps = 0.007419662329418*scrollSpeed*scrollSpeed*scrollSpeed-0.430964999468951*scrollSpeed*scrollSpeed+6.826023792939724*scrollSpeed+15.924633645316113;
-      //fps = predict(fabs(v)/25);// cheng2/50 redmi
-      //fps = 30;
-	/*escroll*/
-      fps = predict(scrollSpeed);//预测开关，开启Log关闭
-      LOG(INFO)<<"-----------predict:"<<fps;
-      //fps = predict(fabs(v)*25);
-      //double fps = predict(fabs(v)*0.03);//c8816
-      /*webview*/
-      /*v = v*1000/16.67;
-      scrollSpeed = v;
-      fps = webview_predict(v/50);*/
-      /**/
-      /***e3x Start****/
-      //v = fabs(v)*0.03;
-      //double fps = 0.007419662329418*v*v*v-0.430964999468951*v*v+6.826023792939724*v+15.924633645316113;
-      /***e3x End****/
-
-      /***log Start****/
-       //fps = 5.039*log(scrollSpeed)+5.928;
-      /***log End****/
-
-      //LOG(INFO)<<"+++++++++++++++++++++++++++++scrollSpeed:"<<scrollSpeed;
-      fps = ceil(fps);
-
-      //LOG(INFO)<<"+++++++++++++++++++++++++++++fps-predict:"<<fps;
-      if(fps<10){fps = 10;}
+  //my code
+      gestureSpeed /= 50;
+      int fps = ceil(predict(abs(gestureSpeed)*2));// cheng2/50 redmi
+      //predict(fabs(gestureSpeed));//c8816
+      if(fps<10){fps = 24;}
       if(fps>60){fps = 60;}
-      countScrolling++;
-      LOG(INFO)<<"+++++++++++++++++++++++++++++scroll-fps:"<<fps;
-      //LOG(INFO)<<"+++++++++++++++++++++++++++++pinch-predict-fps:"<<fps<<" Time:"<<time(NULL)<<" count: "<<countScrolling;
-/*
-      if(fps>last_fps){
-      	last_fps = fps;
-      }else{fps = last_fps;}
+      LOG(INFO)<<"here is func HandleGestureScrollUpdate--------------------fps:"<<fps;
+      doSleep(fps);
 
-*/
-      //LOG(INFO)<<"+++++++++++++++++++++++++++++fps-actual:"<<fps;
-      if(fps >= 1 && fps <= 9){
-       base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(1000000/fps - 16667));
-        //LOG(INFO)<<"当前fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(1000000/fps - 16667);
-      }
+  //my code end
 
-      if(fps >= 10 && fps <= 15){
-        base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(1000000/fps - 16667+(fps-10)*1667*0.75));
-        //LOG(INFO)<<"当前fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(1000000/fps - 16667+(fps-10)*1667*0.75);
-      }
-      else if(fps > 15 && fps < 20){
-	
-        base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(1000000/fps - 16667+(fps-10)*1667*0.6));
-        //LOG(INFO)<<"当前fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(1000000/fps - 16667+(fps-10)*1667*0.6);//0.4
-      }       
-      else if(fps >=20 && fps <= 30){
-	//base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(24997));
-        base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(24997+1667*(30-fps)));
-        //LOG(INFO)<<"当前fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(24997+1667*(30-fps));
-      }
-      else if(fps >30 && fps<=41){
-       base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(16663+1667*(41-fps)*0.5));
-       //LOG(INFO)<<"当前fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(16663+1667*(41-fps)*0.5);
-      }
-
-      else if(fps>41 && fps<=44){
-       //base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(24997+1667*(30-fps)));
-       //base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(1000000/fps - 16667));
-       base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(16246+1667*(44-fps)*0.5));
-       //LOG(INFO)<<"当前fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(16246+1667*(44-fps)*0.5);
-      } //till 45
-      else if(fps==45){
-       base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(15412));
-       //LOG(INFO)<<"当前fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(15412);
-      }
-      else if(fps>45 && fps <=52){
-       base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(11245+1667*(52-fps)*0.5));
-       //LOG(INFO)<<"当前fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(11245+1667*(52-fps)*0.5);
-      }
-      else if(fps==55){//52 15412
-       base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(12912));
-       //LOG(INFO)<<"当前fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(12912);
-      }
-     else if(fps == 60){
-       //base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(0));
-       LOG(INFO)<<"当前fps:60";
-      }
-      else{
-       base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(12912+1667*(55-fps)*0.5));
-       //LOG(INFO)<<"当前fps:"<<fps<<"/delay:"<<base::TimeDelta::FromMicroseconds(12912+1667*(55-fps)*0.5);
-      }
-    
-	/***eScroll End***/
-	//return DROP_EVENT;
 #ifndef NDEBUG
   DCHECK(expect_scroll_update_end_);
 #endif
-/*
-      const float vx = gesture_event.data.flingStart.velocityX;
-      const float vy = gesture_event.data.flingStart.velocityY;
-      current_fling_velocity_ = gfx::Vector2dF(vx, vy);
-      LOG(INFO)<<"Scroll速度vx:"<<vx<<"/vy:"<<vy;
-*/
-    //ce shi event delay
-    //base::TimeTicks event_time =
-    //    base::TimeTicks() +
-     //   base::TimeDelta::FromSecondsD(gesture_event.timeStampSeconds);
-    //base::TimeDelta delay = base::TimeTicks::Now() - event_time;
-    //end
-  //LOG(INFO)<<"ScrollUpdate-------------HandleGestureScrollUpdate+"<<++count<<"Time:"<<time(NULL)<<"Delay:"<<delay;
-	//DLOG(INFO)<<"DLOG KEEP SCROLLING";
   if (!gesture_scroll_on_impl_thread_ && !gesture_pinch_on_impl_thread_)
     return DID_NOT_HANDLE;
 
@@ -1116,25 +790,6 @@ InputHandlerProxy::HandleGestureScrollUpdate(
   gfx::Point scroll_point(gesture_event.x, gesture_event.y);
   gfx::Vector2dF scroll_delta(-gesture_event.data.scrollUpdate.deltaX,
                               -gesture_event.data.scrollUpdate.deltaY);
-	//----------modify start
-  if(start_point_x_ == 0){
-    start_point_x_ = gesture_event.x; 	
-  }
-  if(start_point_y_ == 0){
-    start_point_y_ = gesture_event.y; 	
-  }
-  
-  accumulated_delta_x_  += (gesture_event.data.scrollUpdate.deltaX);	
-  
-  
-  accumulated_delta_y_  += (gesture_event.data.scrollUpdate.deltaY);	
-  
-	accumulated_delta_x += (gesture_event.data.scrollUpdate.deltaX);
-	accumulated_delta_y += (gesture_event.data.scrollUpdate.deltaY);
-	//LOG(INFO)<<"-------------scroll_delta--y"<<gesture_event.data.scrollUpdate.deltaY<<"event_x:"<<gesture_event.x<<"event_y:"<<gesture_event.y;
-        //LOG(INFO)<<"-------------scroll_delta--y"<<gesture_event.data.scrollUpdate.deltaY<<"start_point_x_:"<<start_point_x_<<"start_point_y_:"<<start_point_y_;
-	//---------modify end
-
 
   if (ShouldAnimate(gesture_event.data.scrollUpdate.deltaUnits !=
                     blink::WebGestureEvent::ScrollUnits::Pixels)) {
@@ -1146,7 +801,6 @@ InputHandlerProxy::HandleGestureScrollUpdate(
     switch (input_handler_->ScrollAnimated(scroll_point, scroll_delta, delay)
                 .thread) {
       case cc::InputHandler::SCROLL_ON_IMPL_THREAD:
-        //LOG(INFO)<<"HandleGestureScrollUpdate-------------ShouldAnimate";
         return DID_HANDLE;
       case cc::InputHandler::SCROLL_IGNORED:
         return DROP_EVENT;
@@ -1154,57 +808,22 @@ InputHandlerProxy::HandleGestureScrollUpdate(
         return DID_NOT_HANDLE;
     }
   }
-
-
-//----
-/*
-  if(count%60 != 0){
-    return DROP_EVENT;
- }
-*/
-
-//----modify start
-    /*cc::ScrollStateData scroll_state_data;
-    scroll_state_data.position_x = start_point_x_;
-    scroll_state_data.position_y = start_point_y_;
-    
-    scroll_state_data.delta_x = -accumulated_delta_x_;
-    scroll_state_data.delta_y = -accumulated_delta_y_;
-    LOG(INFO)<<"accumulated_delta_x_/accumulated_delta_y_"<<accumulated_delta_x_<<"/"<<accumulated_delta_y_;
-    cc::ScrollState scroll_state_ = cc::ScrollState(scroll_state_data);
-    gfx::Point scroll_point_(start_point_x_, start_point_y_);
-    //scroll_state.set_is_ending(false);
-   cc::InputHandlerScrollResult scroll_result =
-      input_handler_->ScrollBy(&scroll_state_);
-  HandleOverscroll(scroll_point_, scroll_result, true);
-*/
-
-
-//----
-//---source code below
-
-  cc::InputHandlerScrollResult scroll_result = input_handler_->ScrollBy(&scroll_state);
+  cc::InputHandlerScrollResult scroll_result =
+      input_handler_->ScrollBy(&scroll_state);
   HandleOverscroll(scroll_point, scroll_result, true);
-  
+
   if (scroll_elasticity_controller_)
     HandleScrollElasticityOverscroll(gesture_event, scroll_result);
-  //LOG(INFO)<<"ScrollUpdate-------------调用"<<count<<"/"<<time(NULL);
-  start_point_x_ = 0;start_point_y_ = 0;
-  accumulated_delta_x_ = 0;accumulated_delta_y_ = 0;
+
   return scroll_result.did_scroll ? DID_HANDLE : DROP_EVENT;
-
-
 }
 
-/*
 InputHandlerProxy::EventDisposition InputHandlerProxy::HandleGestureScrollEnd(
   const WebGestureEvent& gesture_event) {
-count = 0;
 #ifndef NDEBUG
   DCHECK(expect_scroll_update_end_);
   expect_scroll_update_end_ = false;
 #endif
-	LOG(INFO)<<"ScrollBegin---------HandleGestureScrollEnd"<<time(NULL);
   if (ShouldAnimate(gesture_event.data.scrollEnd.deltaUnits !=
                     blink::WebGestureEvent::ScrollUnits::Pixels)) {
     // Do nothing if the scroll is being animated; the scroll animation will
@@ -1224,75 +843,8 @@ count = 0;
   return DID_HANDLE;
 }
 
-*/
-
-
-InputHandlerProxy::EventDisposition InputHandlerProxy::HandleGestureScrollEnd(
-  const WebGestureEvent& gesture_event) {
-  //LOG(INFO)<<"HandleGestureScrollEndCount+"<<count<<"T"<<time(NULL);
-  count = 0;
-  last_fps = 0;
-#ifndef NDEBUG
-  DCHECK(expect_scroll_update_end_);
-  expect_scroll_update_end_ = false;
-#endif
-  //LOG(INFO)<<"ScrollEnd-------------HandleGestureScrollEnd";
-  if (ShouldAnimate(gesture_event.data.scrollEnd.deltaUnits !=
-                    blink::WebGestureEvent::ScrollUnits::Pixels)) {
-    // Do nothing if the scroll is being animated; the scroll animation will
-    // generate the ScrollEnd when it is done.
-    //LOG(INFO)<<"ScrollEnd-------------ShouldAnimate";
-  } else {
-    cc::ScrollState scroll_state = CreateScrollStateForGesture(gesture_event);
-    //----modify start
-    /*if(accumulated_delta_x_ != 0 || accumulated_delta_y_ != 0){
-	    cc::ScrollStateData scroll_state_data;
-	    scroll_state_data.position_x = start_point_x_;
-	    scroll_state_data.position_y = start_point_y_;
-	    scroll_state_data.is_beginning = true;
-	    scroll_state_data.delta_x = -accumulated_delta_x_;
-	    scroll_state_data.delta_y = -accumulated_delta_y_;
-	    cc::ScrollState scroll_state_ = cc::ScrollState(scroll_state_data);
-	    gfx::Point scroll_point(start_point_x_, start_point_y_);
-	    //scroll_state.set_is_ending(false);
-	   cc::InputHandlerScrollResult scroll_result =
-	      input_handler_->ScrollBy(&scroll_state_);
-	  HandleOverscroll(scroll_point, scroll_result, true);
-  	  LOG(INFO)<<"ScrollUpdate-------------调用";
-	  if (scroll_elasticity_controller_){
-	    LOG(INFO)<<"ScrollEnd-------------HandleScrollElasticityOverscroll";
-	    HandleScrollElasticityOverscroll(gesture_event, scroll_result);
-	  }
-
-    //return scroll_result.did_scroll ? DID_HANDLE : DROP_EVENT;
-    LOG(INFO)<<"start_point_x:"<<start_point_x<<"start_point_y:"<<start_point_y;
-    LOG(INFO)<<"accumulated_delta_x:"<<accumulated_delta_x<<"accumulated_delta_y:"<<accumulated_delta_y;
-    LOG(INFO)<<"ScrollEnd-------------gesture_event.x:"<<gesture_event.x<<"gesture_event.y:"<<gesture_event.x;
-    LOG(INFO)<<"ScrollEnd-------------scroll_delta--y"<<gesture_event.data.scrollUpdate.deltaY;
-    
-   }*/
-    start_point_x_ = 0;
-    start_point_y_ = 0;
-    accumulated_delta_x_ = 0;
-    accumulated_delta_y_ = 0;
-    //----modify end
-    scroll_state.set_is_ending(true);
-    input_handler_->ScrollEnd(&scroll_state);
-  }
-  if (!gesture_scroll_on_impl_thread_)
-    return DID_NOT_HANDLE;
-
-  if (scroll_elasticity_controller_)
-    HandleScrollElasticityOverscroll(gesture_event, cc::InputHandlerScrollResult());
-
-  gesture_scroll_on_impl_thread_ = false;
-  return DID_HANDLE;
-}
-
 InputHandlerProxy::EventDisposition InputHandlerProxy::HandleGestureFlingStart(
     const WebGestureEvent& gesture_event) {
-
-  LOG(INFO)<<"-------------HandleGestureFlingStart";
   cc::ScrollState scroll_state = CreateScrollStateForGesture(gesture_event);
   cc::InputHandler::ScrollStatus scroll_status;
   scroll_status.main_thread_scrolling_reasons =
@@ -1313,7 +865,7 @@ InputHandlerProxy::EventDisposition InputHandlerProxy::HandleGestureFlingStart(
       scroll_status.main_thread_scrolling_reasons =
           cc::MainThreadScrollingReason::kContinuingMainThreadScroll;
     } else {
-      scroll_status = input_handler_->FlingScrollBegin();//FlingScrollBegin
+      scroll_status = input_handler_->FlingScrollBegin();
     }
     break;
   case blink::WebGestureDeviceUninitialized:
@@ -1335,8 +887,6 @@ InputHandlerProxy::EventDisposition InputHandlerProxy::HandleGestureFlingStart(
       const float vx = gesture_event.data.flingStart.velocityX;
       const float vy = gesture_event.data.flingStart.velocityY;
       current_fling_velocity_ = gfx::Vector2dF(vx, vy);
-      LOG(INFO)<<"Fling速度vx:"<<vx<<"/vy:"<<vy;
-
       DCHECK(!current_fling_velocity_.IsZero());
       fling_curve_.reset(client_->CreateFlingAnimationCurve(
           gesture_event.sourceDevice,
@@ -1391,7 +941,6 @@ InputHandlerProxy::EventDisposition InputHandlerProxy::HandleGestureFlingStart(
 
 InputHandlerProxy::EventDisposition InputHandlerProxy::HandleTouchStart(
     const blink::WebTouchEvent& touch_event) {
-  //LOG(INFO)<<"-------------HandleTouchStart";
   EventDisposition result = DROP_EVENT;
   for (size_t i = 0; i < touch_event.touchesLength; ++i) {
     if (touch_event.touches[i].state != WebTouchPoint::StatePressed)
@@ -1461,7 +1010,6 @@ InputHandlerProxy::EventDisposition InputHandlerProxy::HandleTouchMove(
 
 InputHandlerProxy::EventDisposition InputHandlerProxy::HandleTouchEnd(
     const blink::WebTouchEvent& touch_event) {
-  //LOG(INFO)<<"-------------HandleTouchEnd";
   if (touch_event.touchesLength == 1)
     touch_start_result_ = kEventDispositionUndefined;
   return DID_NOT_HANDLE;
@@ -1469,9 +1017,6 @@ InputHandlerProxy::EventDisposition InputHandlerProxy::HandleTouchEnd(
 
 bool InputHandlerProxy::FilterInputEventForFlingBoosting(
     const WebInputEvent& event) {
-  
-  //LOG(INFO)<<"-------------FilterInputEventForFlingBoosting";
-  return false;
   if (!WebInputEvent::isGestureEventType(event.type))
     return false;
 
@@ -1514,7 +1059,6 @@ bool InputHandlerProxy::FilterInputEventForFlingBoosting(
       return false;
 
     case WebInputEvent::GestureScrollBegin:
-      //LOG(INFO)<<"-------------FilterInputEventForFlingBoosting----GestureScrollBegin";
       if (!input_handler_->IsCurrentlyScrollingLayerAt(
               gfx::Point(gesture_event.x, gesture_event.y),
               fling_parameters_.sourceDevice == blink::WebGestureDeviceTouchpad
@@ -1530,7 +1074,6 @@ bool InputHandlerProxy::FilterInputEventForFlingBoosting(
       return true;
 
     case WebInputEvent::GestureScrollUpdate: {
-      LOG(INFO)<<"-------------FilterInputEventForFlingBoosting----GestureScrollUpdate";
       const double time_since_last_boost_event =
           event.timeStampSeconds - last_fling_boost_event_.timeStampSeconds;
       const double time_since_last_fling_animate = std::max(
@@ -1539,7 +1082,6 @@ bool InputHandlerProxy::FilterInputEventForFlingBoosting(
                                                gesture_event,
                                                time_since_last_boost_event,
                                                time_since_last_fling_animate)) {
-        LOG(INFO)<<"-------------FilterInputEventForFlingBoosting----ShouldSuppressScrollForFlingBoosting";
         ExtendBoostedFlingTimeout(gesture_event);
         return true;
       }
@@ -1551,14 +1093,13 @@ bool InputHandlerProxy::FilterInputEventForFlingBoosting(
     case WebInputEvent::GestureScrollEnd:
       // Clear the last fling boost event *prior* to fling cancellation,
       // preventing insertion of a synthetic GestureScrollBegin.
-      LOG(INFO)<<"-------------FilterInputEventForFlingBoosting----GestureScrollEnd";
       last_fling_boost_event_ = WebGestureEvent();
       CancelCurrentFling();
       return true;
 
     case WebInputEvent::GestureFlingStart: {
       DCHECK_EQ(fling_parameters_.sourceDevice, gesture_event.sourceDevice);
-      LOG(INFO)<<"-------------FilterInputEventForFlingBoosting----GestureFlingStart";
+
       bool fling_boosted =
           fling_parameters_.modifiers == gesture_event.modifiers &&
           ShouldBoostFling(current_fling_velocity_, gesture_event);
@@ -1605,7 +1146,6 @@ bool InputHandlerProxy::FilterInputEventForFlingBoosting(
     }
 
     default:
-      //LOG(INFO)<<"-------------FilterInputEventForFlingBoosting----default";
       // All other types of gestures (taps, presses, etc...) will complete the
       // deferred fling cancellation.
       CancelCurrentFling();
@@ -1738,8 +1278,6 @@ void InputHandlerProxy::HandleOverscroll(
     const cc::InputHandlerScrollResult& scroll_result,
     bool bundle_overscroll_params_with_ack) {
   DCHECK(client_);
-
-  //LOG(INFO)<<"-------------HandleOverscroll";
   if (!scroll_result.did_overscroll_root)
     return;
 
@@ -1781,7 +1319,6 @@ void InputHandlerProxy::HandleOverscroll(
 }
 
 bool InputHandlerProxy::CancelCurrentFling() {
-  //LOG(INFO)<<"InputHandlerProxy::CancelCurrentFling";
   if (CancelCurrentFlingWithoutNotifyingClient()) {
     client_->DidStopFlinging();
     return true;
@@ -1904,11 +1441,8 @@ bool InputHandlerProxy::TouchpadFlingScroll(
   return false;
 }
 
-
-
 bool InputHandlerProxy::scrollBy(const WebFloatSize& increment,
                                  const WebFloatSize& velocity) {
-  //LOG(INFO)<<"------------InputHandlerProxy::scrollBy"<<time(NULL);
   WebFloatSize clipped_increment;
   WebFloatSize clipped_velocity;
   if (!disallow_horizontal_fling_scroll_) {
@@ -1921,7 +1455,7 @@ bool InputHandlerProxy::scrollBy(const WebFloatSize& increment,
   }
 
   current_fling_velocity_ = clipped_velocity;
-  LOG(INFO)<<"current_fling_velocity_.height:"<<clipped_velocity.height;
+
   // Early out if the increment is zero, but avoid early termination if the
   // velocity is still non-zero.
   if (clipped_increment == WebFloatSize())
@@ -1978,7 +1512,6 @@ void InputHandlerProxy::HandleScrollElasticityOverscroll(
     const WebGestureEvent& gesture_event,
     const cc::InputHandlerScrollResult& scroll_result) {
   DCHECK(scroll_elasticity_controller_);
-  LOG(INFO)<<"------------InputHandlerProxy::HandleScrollElasticityOverscroll";
   // Send the event and its disposition to the elasticity controller to update
   // the over-scroll animation. Note that the call to the elasticity controller
   // is made asynchronously, to minimize divergence between main thread and

@@ -58,10 +58,10 @@ public class HttpDownloadThread extends Thread{
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
-			Log.w(TAG, "end-time: %s ", System.currentTimeMillis());
-                        Toast.makeText(mContext,"下载成功",Toast.LENGTH_SHORT).show();
-                    }
-                });
+                     Log.w(TAG, "end-time: %s ", System.currentTimeMillis());
+                     Toast.makeText(mContext,"model downloading success",Toast.LENGTH_SHORT).show();
+                 }
+             });
             } catch (IOException e) {
                 e.printStackTrace();
             }

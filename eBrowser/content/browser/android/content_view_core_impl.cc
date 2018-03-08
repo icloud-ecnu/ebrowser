@@ -1038,19 +1038,26 @@ void ContentViewCoreImpl::ScrollBegin(JNIEnv* env,
   event.data.scrollBegin.deltaXHint = hintx / dpi_scale();
   event.data.scrollBegin.deltaYHint = hinty / dpi_scale();
   event.data.scrollBegin.targetViewport = target_viewport;
-  
   SendGestureEvent(event);
 }
 
-void ContentViewCoreImpl::ScrollBegin1(JNIEnv* env,
+//my code
+void ContentViewCoreImpl::SendModelStr(JNIEnv* env,
                                       const JavaParamRef<jobject>& obj,
-                                     const JavaParamRef<jstring>& caonima,jlong speed) {
-  //LOG(INFO)<<"######################################################ContentViewCore::ScrollBegin-caonima"<<ConvertJavaStringToUTF8(env, caonima);
+                                     const JavaParamRef<jstring>& model) {
 
-  std::string model_str = ConvertJavaStringToUTF8(env, caonima);
-
-  Send(new InputMsg_FuckIPC(routing_id(),model_str,speed));
+  std::string model_str = ConvertJavaStringToUTF8(env, model);
+  Send(new InputMsg_ModelStr(routing_id(),model_str));
 }
+
+void ContentViewCoreImpl::SendModelParams(JNIEnv* env,
+                   const base::android::JavaParamRef<jobject>& obj, jlong speed, jfloat entropy) {
+ 
+  Send(new InputMsg_ModelParams(routing_id(), speed, entropy));
+}
+//end
+
+
 
 void ContentViewCoreImpl::ScrollEnd(JNIEnv* env,
                                     const JavaParamRef<jobject>& obj,
@@ -1075,6 +1082,9 @@ void ContentViewCoreImpl::ScrollBy(JNIEnv* env,
   event.data.scrollUpdate.deltaX = -dx / dpi_scale();
   event.data.scrollUpdate.deltaY = -dy / dpi_scale();
   //LOG(INFO)<<"event.data.scrollUpdate.deltaY))))))))))))))))))))"<<event.data.scrollUpdate.deltaY;
+
+
+
   SendGestureEvent(event);
 }
 

@@ -1236,10 +1236,14 @@ public class ContentViewCore implements AccessibilityStateChangeListener, Displa
     }
 
 //-------------------------------------------------
-    public void switchChangeFps(String modelStr,long speed) {
+    public void SendModelStr(String modelStr) {
         if (mNativeContentViewCore == 0) return;
-        //nativeScrollBegin(mNativeContentViewCore, fps, -1, -1, 0, 0, true);
-        nativeScrollBegin1(mNativeContentViewCore,modelStr,speed);
+        nativeSendModelStr(mNativeContentViewCore,modelStr);
+    }
+
+    public void sendModelParams(long speed, float entropy) {
+        if (mNativeContentViewCore == 0) return;
+        nativeSendModelParams(mNativeContentViewCore,speed,entropy);
     }
 
     public void changeFps(int fps) {
@@ -3378,7 +3382,9 @@ Log.w(TAG, "ContentViewCore-dx: %s, dy: %s, time: %s",dxPix,dyPix,time);
     private native void nativeScrollBegin(long nativeContentViewCoreImpl, long timeMs, float x,
             float y, float hintX, float hintY, boolean targetViewport);
     
-    private native void nativeScrollBegin1(long nativeContentViewCoreImpl,String caonima,long speed);
+    private native void nativeSendModelStr(long nativeContentViewCoreImpl,String model);
+
+    private native void nativeSendModelParams(long nativeContentViewCoreImpl,long speed,float entropy);
 
     private native void nativeScrollEnd(long nativeContentViewCoreImpl, long timeMs);
 

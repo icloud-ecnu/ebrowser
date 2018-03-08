@@ -112,9 +112,10 @@ public class ContentView extends FrameLayout
 	    long temp = (deltaY*1000/deltaT);
 		
 	    temp = Math.abs(temp);
-	    mContentViewCore.switchChangeFps("",temp);
+        float entropy = 0;
 	    totalScrollSpeed+=temp;
 	    lastScrollAvgSpeed = totalScrollSpeed/countScroll;
+        mContentViewCore.sendModelParams(temp,entropy);
 	    Log.w(TAG, "speeeeeeeeeeeeeeeeeeed: %s ", temp);
 	    Log.w(TAG, "speeeeeeeeeeeeeeeeeeed-avg: %s ", lastScrollAvgSpeed);
 	}
@@ -181,6 +182,7 @@ public class ContentView extends FrameLayout
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        Log.e(TAG, "onTouchEvent");
         return mContentViewCore.onTouchEvent(event);//调用 ContentViewCore 的对象方法
     }
 

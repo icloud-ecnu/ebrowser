@@ -17,18 +17,10 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:background="@drawable/progress">
-        <Button android:id="@+id/reset0"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/reset"
-	    android:visibility="gone"
-             />
         <Button android:id="@+id/savePowerBtn"
-            
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/savePower"
-	    android:visibility="visible"
              />
         <ImageButton android:id="@+id/stop_reload_button"
             android:layout_width="38dp"
@@ -62,71 +54,58 @@
             android:src="@android:drawable/ic_media_next"
             android:scaleType="center"
             android:contentDescription="@null" />
-	
-        <Button android:id="@+id/bushuang0"
-	   
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/bushuang"
-	    android:visibility="gone"
-             />
-       <TextView
-        android:id="@+id/text_bushuang0"
+       <Button android:id="@+id/reset"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/text_bushuang"
-	android:visibility="gone"
-	 />
-       <Button android:id="@+id/reset"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/reset"
+        android:text="@string/reset"
+        android:visibility="gone"
        />
-
-    </LinearLayout>
-
-<LinearLayout android:id="@+id/toolbar1"
-        android:layout_width="match_parent"
+   <ImageButton android:id="@+id/minus"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:src="@drawable/minus"
+            android:scaleType="centerCrop"
+            android:contentDescription="@null" />
+    <TextView
+        android:id="@+id/fpsTag"       
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-      >
-        <Button android:id="@+id/bushuang"
-	    android:visibility="visible"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/bushuang"
-             />
-
-        <Button android:id="@+id/minus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/minus"
-             />
-        <TextView
+        android:text="@string/fpsTag" />
+        
+    <TextView
         android:id="@+id/text_fps"       
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/fps" />
-        <Button android:id="@+id/plus"          
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/plus"
-             />
 
-        <Button android:id="@+id/feedback"
-	    android:visibility="visible"
+    <ImageButton android:id="@+id/plus"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:src="@drawable/plus"
+            android:scaleType="centerCrop"
+            android:contentDescription="@null" />
+
+    <Button android:id="@+id/feedback"
+            android:visibility="gone"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/feedback"
              />
-	<TextView
-        android:id="@+id/text_bushuang"
-	android:visibility="gone"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/text_bushuang" />
+    <Button android:id="@+id/bushuang"
+          android:visibility="gone"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="@string/bushuang"
+             />
+             <TextView
+                android:id="@+id/text_bushuang"
+                android:visibility="gone"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/text_bushuang" />
 
     </LinearLayout>
+
     <FrameLayout android:id="@+id/contentview_holder"
         android:layout_width="match_parent"
         android:layout_height="0dp"

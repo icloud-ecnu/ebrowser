@@ -47,8 +47,8 @@ public class HttpPostThread extends Thread {
                         outStream.write(data, 0, count);
                     result = new String(outStream.toByteArray(),"ISO-8859-1");
                 }
-		String temp = "失败";
-		if(!result.isEmpty()){temp = "成功";}
+		String temp = "tweak fail";
+		if(!result.isEmpty()){temp = "tweak success";}
 		final String msg = temp;
 		
 		

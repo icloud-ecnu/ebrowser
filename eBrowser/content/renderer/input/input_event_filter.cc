@@ -207,28 +207,43 @@ void InputEventFilter::ForwardToHandler(const IPC::Message& message,
   TRACE_EVENT1("input", "InputEventFilter::ForwardToHandler",
                "message_type", GetInputMessageTypeName(message));
 
-	if (message.type() == InputMsg_FuckIPC::ID) {
-	//LOG(INFO)<<"get message";
+  //my code
+	if (message.type() == InputMsg_ModelStr::ID) {
+ 	  int routing_id_ = message.routing_id();
+  	InputMsg_ModelStr::Param params;
+  	if (!InputMsg_ModelStr::Read(&message, &params)){
+      return;
+    }
+ 	  std::string msg = std::get<0>(params);
+	
+  /*
+    int speed = std::get<1>(params);
+  	input_handler_manager_->HandleInputModelInfoMsg(routing_id_,msg,speed);
+          return;
+  */
+    input_handler_manager_->HandleInputModelStrMsg(routing_id_,msg);
+    return;
+  }
 
- 	int routing_id_ = message.routing_id();
-  	InputMsg_FuckIPC::Param params;
-  	if (!InputMsg_FuckIPC::Read(&message, &params))
-   	 return;
- 	std::string msg = std::get<0>(params);
-	int speed = std::get<1>(params);
-	//LOG(INFO)<<"get message routing_id:"<<routing_id_<<" content:"<<msg;
-	input_handler_manager_->HandleInputModelInfoMsg(routing_id_,msg,speed);
-        return;
-	/*target_task_runner_->PostTask(
-      	FROM_HERE,
-      	base::Bind(&InputEventFilter::NeedsMainFrame, this, routing_id));*/
-
-}
+  if (message.type() == InputMsg_ModelParams::ID) {
+    int routing_id_ = message.routing_id();
+    InputMsg_ModelParams::Param params;
+    if (!InputMsg_ModelParams::Read(&message, &params)){
+      return;
+    }
+    int speed = std::get<0>(params);
+    float entropy = std::get<1>(params);
+    input_handler_manager_->HandleInputModelParamsMsg(routing_id_,speed, entropy);
+    return;
+  }
+  
+  //end
   if (message.type() != InputMsg_HandleInputEvent::ID) {
     TRACE_EVENT_INSTANT0(
         "input",
         "InputEventFilter::ForwardToHandler::ForwardToMainListener",
         TRACE_EVENT_SCOPE_THREAD);
+    //LOG(INFO)<<"get message of event";
     main_task_runner_->PostTask(FROM_HERE, base::Bind(main_listener_, message));
     return;
   }

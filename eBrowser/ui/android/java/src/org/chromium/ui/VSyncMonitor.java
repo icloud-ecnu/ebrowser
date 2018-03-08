@@ -9,7 +9,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.Choreographer;
 import android.view.WindowManager;
-
 import org.chromium.base.TraceEvent;
 
 /**
@@ -18,7 +17,6 @@ import org.chromium.base.TraceEvent;
 public class VSyncMonitor {
     private static final long NANOSECONDS_PER_SECOND = 1000000000;
     private static final long NANOSECONDS_PER_MICROSECOND = 1000;
-
     private boolean mInsideVSync = false;
 
     // Conservative guess about vsync's consecutivity.
@@ -64,9 +62,7 @@ public class VSyncMonitor {
         final boolean useEstimatedRefreshPeriod = refreshRate < 30;
 
         if (refreshRate <= 0) refreshRate = 60;
-	
         mRefreshPeriodNano = (long) (NANOSECONDS_PER_SECOND / refreshRate);
-
         mChoreographer = Choreographer.getInstance();
         mVSyncFrameCallback = new Choreographer.FrameCallback() {
             @Override

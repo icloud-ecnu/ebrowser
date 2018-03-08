@@ -51,13 +51,11 @@ public class ContentShellActivity extends Activity {
     private ActivityWindowAndroid mWindowAndroid;
     private Intent mLastSentIntent;
     private String mStartupUrl;
-    String appFolderPath;
-    String systemPath;
     @Override
     @SuppressFBWarnings("DM_EXIT")
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-	Shell.handler = new Handler();
+	    Shell.handler = new Handler();
         // Initializing the command line must occur before loading the library.
         if (!CommandLine.isInitialized()) {
             ContentApplication.initCommandLine(this);
@@ -69,7 +67,7 @@ public class ContentShellActivity extends Activity {
         waitForDebuggerIfNeeded();
 
         DeviceUtils.addDeviceSpecificUserAgentSwitch(this);
-
+        //load JNI lib
         try {
             LibraryLoader.get(LibraryProcessType.PROCESS_BROWSER).ensureInitialized();
         } catch (ProcessInitException e) {
@@ -81,19 +79,18 @@ public class ContentShellActivity extends Activity {
         }
 
         setContentView(R.layout.content_shell_activity);
-
-        systemPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/";
-        appFolderPath = systemPath+"libsvm/";
-
-        // 1. create necessary folder to save model files
-        CreateAppFolderIfNeed();
-        copyAssetsDataIfNeed();
-
-        // 2. assign model/output paths
-        
-        String modelPath = appFolderPath+"model ";
-
-        mShellManager = (ShellManager) findViewById(R.id.shell_container);
+        //my code
+        String diskPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/";
+        String modelPath = diskPath+"libsvm/";
+        if(!isExternalStorageWritable()){
+            Toast.makeText(ContentShellActivity.this,"External storage is not available",Toast.LENGTH_SHORT).show();
+            //apply for storage permissions
+        }
+        //Create folder for saving model files
+        createAppFolderIfNeed(modelPath);
+        copyAssetsDataIfNeed(modelPath);
+        //end
+        mShellManager = (ShellManager) findViewById(R.id.shell_container);//Get shellManager obj
         final boolean listenToActivityState = true;
 
         mWindowAndroid = new ActivityWindowAndroid(this, listenToActivityState);
@@ -141,32 +138,25 @@ public class ContentShellActivity extends Activity {
         }
     }
 
-//
- /*
-    * Some utility functions
-    * */
-    private void CreateAppFolderIfNeed(){
+//my code
+ 
+    //Some utility functions
+    private void createAppFolderIfNeed(String dir){
         // 1. create app folder if necessary
-        File folder = new File(appFolderPath);
-
+        File folder = new File(dir);
         if (!folder.exists()) {
             folder.mkdir();
             Log.d(LOG_TAG,"Appfolder is not existed, create one");
         } else {
             Log.w(LOG_TAG,"WARN: Appfolder has not been deleted");
         }
-
-
     }
 
-    private void copyAssetsDataIfNeed(){
+    private void copyAssetsDataIfNeed(String dir){
         String assetsToCopy[] = {"model"};
-        //String targetPath[] = {C.systemPath+C.INPUT_FOLDER+C.INPUT_PREFIX+AudioConfigManager.inputConfigTrain+".wav", C.systemPath+C.INPUT_FOLDER+C.INPUT_PREFIX+AudioConfigManager.inputConfigPredict+".wav",C.systemPath+C.INPUT_FOLDER+"SomeoneLikeYouShort.mp3"};
-
-        for(int i=0; i<assetsToCopy.length; i++){
+       for(int i=0; i<assetsToCopy.length; i++){
             String from = assetsToCopy[i];
-            String to = appFolderPath+from;
-
+            String to = dir+from;
             // 1. check if file exist
             File file = new File(to);
             if(file.exists()){
@@ -208,9 +198,23 @@ public class ContentShellActivity extends Activity {
         }
     }
 
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
+    }
 
-//
-
+    public boolean isExternalStorageReadable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state) ||
+            Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+            return true;
+        }
+        return false;
+    }
+//end
     private void finishInitialization(Bundle savedInstanceState) {
         String shellUrl;
         if (!TextUtils.isEmpty(mStartupUrl)) {

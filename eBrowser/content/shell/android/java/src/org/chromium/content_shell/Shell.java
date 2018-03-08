@@ -76,10 +76,10 @@ public class Shell extends LinearLayout {
     private ImageButton mPrevButton;
     private ImageButton mNextButton;
     private ImageButton mStopReloadButton;
-    private Button mminusButton;
+    private ImageButton minusButton;
     private Button msavePowerButton;
-    private Button mplusButton;
-    private Button mresetButton;
+    private ImageButton plusButton;
+    private Button resetButton;
     private TextView fpsText;
     private ClipDrawable mProgressDrawable;
     private Button bushuangButton;
@@ -92,19 +92,20 @@ public class Shell extends LinearLayout {
 
     private boolean mLoading = false;
     private boolean mIsFullscreen = false;
-    private int initalFps = 10;
+    private int initalFps = 0;
     private int initalBushuang = 0;
     private Context mContext;
     public static Handler handler;
+    private String ipAddr = "http://139.224.10.197:8080";
     /**
      * Constructor for inflating via XML.
      */
     public Shell(Context context, AttributeSet attrs) {
         super(context, attrs);
-	mContext = (Activity) getContext();
-	if(getUUID(mContext).isEmpty()){
-    	   setUUID(mContext);
-	}
+        mContext = (Activity) getContext();
+        if(getUUID(mContext).isEmpty()){
+            setUUID(mContext);
+        }
     }
 
     /**
@@ -119,9 +120,9 @@ public class Shell extends LinearLayout {
             }
         } else {
             contentViewHolder.addView(contentViewRenderView,
-                    new FrameLayout.LayoutParams(
-                            FrameLayout.LayoutParams.MATCH_PARENT,
-                            FrameLayout.LayoutParams.MATCH_PARENT));
+                new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT));
         }
         mContentViewRenderView = contentViewRenderView;
     }
@@ -187,16 +188,16 @@ public class Shell extends LinearLayout {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
                 if ((actionId != EditorInfo.IME_ACTION_GO) && (event == null
-                        || event.getKeyCode() != KeyEvent.KEYCODE_ENTER
-                        || event.getAction() != KeyEvent.ACTION_DOWN)) {
+                    || event.getKeyCode() != KeyEvent.KEYCODE_ENTER
+                    || event.getAction() != KeyEvent.ACTION_DOWN)) {
                     return false;
-                }
-                loadUrl(mUrlTextView.getText().toString());
-                setKeyboardVisibilityForUrl(false);
-                mContentViewCore.getContainerView().requestFocus();
-                return true;
             }
-        });
+            loadUrl(mUrlTextView.getText().toString());
+            setKeyboardVisibilityForUrl(false);
+            mContentViewCore.getContainerView().requestFocus();
+            return true;
+        }
+    });
         mUrlTextView.setOnFocusChangeListener(new OnFocusChangeListener() {
             @Override
             public void onFocusChange(View v, boolean hasFocus) {
@@ -205,7 +206,7 @@ public class Shell extends LinearLayout {
                 //mPrevButton.setVisibility(hasFocus ? GONE : VISIBLE);
                 //mStopReloadButton.setVisibility(hasFocus ? GONE : VISIBLE); //输入网址时隐藏前进后退刷新按钮
 		//bushuangButton.setVisibility(hasFocus ? GONE : VISIBLE);
-		msavePowerButton.setVisibility(hasFocus ? GONE : VISIBLE);
+		//msavePowerButton.setVisibility(hasFocus ? GONE : VISIBLE);
                 if (!hasFocus) {
                     mUrlTextView.setText(mWebContents.getUrl());
                 }
@@ -278,170 +279,206 @@ public class Shell extends LinearLayout {
                 else mNavigationController.reload(true);
             }
         });
-//------------
-       fpsText =  (TextView) findViewById(R.id.text_fps);
-       text_bushuang =  (TextView) findViewById(R.id.text_bushuang);
-       mminusButton = (Button) findViewById(R.id.minus);
-        mminusButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(initalFps<=2){return;}
-                initalFps -= 2;
-                fpsText.setText(String.valueOf(initalFps));
-                mContentViewCore.changeFps(initalFps);
-            }
-        });
-       mplusButton = (Button) findViewById(R.id.plus);
-        mplusButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(initalFps>=60){return;}
-                initalFps += 2;
-                fpsText.setText(String.valueOf(initalFps));
-                mContentViewCore.changeFps(initalFps);
-            }
-        });
+//my code
+        fpsText =  (TextView) findViewById(R.id.text_fps);
+        text_bushuang =  (TextView) findViewById(R.id.text_bushuang);
 
+        minusButton = (ImageButton) findViewById(R.id.minus);
+        plusButton = (ImageButton) findViewById(R.id.plus);
+        minusButton.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(initalFps<=0){
+                    return;
+                }
+                initalFps -= 1;
+                fpsText.setText(String.valueOf(initalFps));
+                //mContentViewCore.changeFps(initalFps);
+                talkToServer(-1);
+            }
+        });
+        
+        plusButton.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(initalFps>=60){
+                    return;
+                }
+                initalFps += 1;
+                fpsText.setText(String.valueOf(initalFps));
+                //mContentViewCore.changeFps(initalFps);
+                talkToServer(+1);
+            }
+        });
+/*
         bushuangButton = (Button) findViewById(R.id.bushuang);//feedback of scroll
-	feedbackButton = (Button) findViewById(R.id.feedback);//feedback of pinch
+
+	    feedbackButton = (Button) findViewById(R.id.feedback);//feedback of pinch
+
         bushuangButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-		if(!isPowerSaving){return;}
-                Log.w(TAG, "speeeeeeeeeeeeeeeeeeed-shell: %s ", ContentView.lastScrollAvgSpeed);
-		Log.w(TAG, "start-time: %s ", System.currentTimeMillis());
-		String ipAddr = "http://139.224.10.197:8080";
-		final String urlSave = ipAddr+"/save?deviceId="+getUUID(mContext)+"&speed="+(ContentView.lastScrollAvgSpeed/50)+"&step=1";
-		final String urlTrain = ipAddr+"/train?deviceId="+getUUID(mContext);
-		final String urlDownload = ipAddr+"/download?fileName="+getUUID(mContext);
-		Toast.makeText(mContext,"反馈",Toast.LENGTH_SHORT).show();
-                new HttpPostThread(urlSave, mContext, handler).start();
-                int lastCount = getCount(mContext);
-		lastCount += 1;
-                Log.w(TAG,"已反馈次数: %s",lastCount);
-                doCount(mContext,lastCount);
-		if(lastCount % 5 == 0){
-			Toast.makeText(mContext,"训练",Toast.LENGTH_SHORT).show();
-			new HttpPostThread(urlTrain, mContext, handler).start();
-		}
-		if(lastCount % 6 == 0){
-			Toast.makeText(mContext,"下载",Toast.LENGTH_SHORT).show();
-			new HttpDownloadThread(urlDownload, mContext, handler).start();
-		}
-		ContentView.lastScrollAvgSpeed = 0;
-		return;
+        @Override
+        public void onClick(View v) {
+          if(!isPowerSaving){return;}
+          Log.w(TAG, "speed-shell: %s ", ContentView.lastScrollAvgSpeed);
+          Log.w(TAG, "start-time: %s ", System.currentTimeMillis());
+          final String urlSave = ipAddr+"/save?deviceId="+getUUID(mContext)+"&speed="+(ContentView.lastScrollAvgSpeed/50)+"&step=1";
+          final String urlTrain = ipAddr+"/train?deviceId="+getUUID(mContext);
+          final String urlDownload = ipAddr+"/download?fileName="+getUUID(mContext);
+          Toast.makeText(mContext,"反馈",Toast.LENGTH_SHORT).show();
+          new HttpPostThread(urlSave, mContext, handler).start();
+          int lastCount = getCount(mContext);
+          lastCount += 1;
+          Log.w(TAG,"已反馈次数: %s",lastCount);
+          setCount(mContext,lastCount);
+          if(lastCount % 5 == 0){
+           Toast.makeText(mContext,"训练",Toast.LENGTH_SHORT).show();
+           new HttpPostThread(urlTrain, mContext, handler).start();
+       }
+       if(lastCount % 6 == 0){
+           Toast.makeText(mContext,"下载",Toast.LENGTH_SHORT).show();
+           new HttpDownloadThread(urlDownload, mContext, handler).start();
+       }
+       ContentView.lastScrollAvgSpeed = 0;
+       return;
+   }
+});
+    feedbackButton.setOnClickListener(new OnClickListener() {
+        @Override
+        public void onClick(View v) {
+          if(ContentView.lastScrollAvgSpeed<=0){return;}
+          long tempSpeed = ContentView.lastScrollAvgSpeed;
+          String tempFps = fpsText.getText().toString();
+          initalBushuang += 1;
+          text_bushuang.setText(String.valueOf(initalBushuang));
+          final String urlSave0 = ipAddr+"/pinch?deviceId="+getUUID(mContext)+"&speed="+tempSpeed+"&fps="+tempFps;
+          new HttpPostThread(urlSave0, mContext, handler).start();
+          Toast.makeText(mContext,"速度："+ContentView.lastScrollAvgSpeed+" FPS:"+tempFps,Toast.LENGTH_SHORT).show();
+          ContentView.lastScrollAvgSpeed = 0;
+          return;
+      }
+  });
+*/
+        //start/stop power saving mode
+    msavePowerButton = (Button) findViewById(R.id.savePowerBtn);
+    msavePowerButton.setOnClickListener(new OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            isPowerSaving = !isPowerSaving;
+            if(isPowerSaving){
+                msavePowerButton.setText("stop");
+            }else{
+                msavePowerButton.setText("start");
             }
-        });
-        feedbackButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-		if(ContentView.lastScrollAvgSpeed<=0){return;}
-                long tempSpeed = ContentView.lastScrollAvgSpeed;
-		String tempFps = fpsText.getText().toString();
-                initalBushuang += 1;
-                text_bushuang.setText(String.valueOf(initalBushuang));
-		String ipAddr = "http://139.224.10.197:8080";
-		final String urlSave0 = ipAddr+"/pinch?deviceId="+getUUID(mContext)+"&speed="+tempSpeed+"&fps="+tempFps;
-		new HttpPostThread(urlSave0, mContext, handler).start();
-		Toast.makeText(mContext,"速度："+ContentView.lastScrollAvgSpeed+" FPS:"+tempFps,Toast.LENGTH_SHORT).show();
-		ContentView.lastScrollAvgSpeed = 0;
-		return;
+            if(!isPowerSaving){
+                mContentViewCore.SendModelStr("stop");
+                return;
             }
-        });
+            String diskPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/";
+            String modelPath = diskPath+"libsvm/";
+            String personalizedModel = modelPath+getUUID(mContext);
+            String sharedModel = modelPath+"model";
+            String line = null;
+            StringBuilder text = new StringBuilder();
+            try {	
+               File file = new File(personalizedModel);
+               if(!file.exists()){
+                  file = new File(sharedModel);
+              }
+              BufferedReader buf = new BufferedReader(new FileReader(file));	     
+              while(( line = buf.readLine() ) != null )
+              {
+                  if(text.length()>0){
+                      text.append("\n");
+                  }
+                  text.append(line.trim());
+              }
+              buf.close();
+          }catch (IOException e){
+             throw new RuntimeException("Read file error");
+         }
+         final String modelStr = text.toString();
+         mContentViewCore.SendModelStr(modelStr);
+     }
+ });
 
+    resetButton = (Button) findViewById(R.id.reset);
+    resetButton.setOnClickListener(new OnClickListener() {
+        @Override
+        public void onClick(View v) {
+           initalBushuang = 0;
+           text_bushuang.setText(String.valueOf(initalBushuang));
+           initalFps = 10;
+           fpsText.setText(String.valueOf(initalFps));
+           mContentViewCore.changeFps(initalFps);
+       }
+   });
+}
 
-      msavePowerButton = (Button) findViewById(R.id.savePowerBtn);
-        msavePowerButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-	        isPowerSaving = !isPowerSaving;
-		if(isPowerSaving){msavePowerButton.setText("关闭");}else{msavePowerButton.setText("启用");}
-                //if(initalFps>=60){return;}
-                if(!isPowerSaving){
-			mContentViewCore.switchChangeFps("stop",0);
-			return;
-		}
-                //initalFps += 2;
-	      String systemPath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/";
-	      String appFolderPath = systemPath+"libsvm/";
-	      String modelPath0 = appFolderPath+getUUID(mContext);
-	      String modelPath = appFolderPath+"model";
-	      String temp = "";
-	      String line = null;
-	      StringBuilder text = new StringBuilder();
-      try {	
-           File file = new File(modelPath0);
-	   if(!file.exists()){file = new File(modelPath);}
-           BufferedReader buf = new BufferedReader(new FileReader(file));	     
-           while((line=buf.readLine())!=null)
-	   {
-		if(text.length()>0){
-		    text.append("\n");
-   		}
-		text.append(line.trim());
-           }
-           buf.close();
-	}
-	catch (IOException e2)
-	{
-           throw new RuntimeException("读取文件异常");
-	}
-        final String modelStr = text.toString();
-        //fpsText.setText(String.valueOf(initalFps));		
-        mContentViewCore.switchChangeFps(modelStr,0);
-        }
-        });
+private void talkToServer(int step){
+  if(!isPowerSaving){
+    return;
+  }
+  Log.w(TAG, "speed-shell: %s ", ContentView.lastScrollAvgSpeed);
+  Log.w(TAG, "start-time: %s ", System.currentTimeMillis());
+  final String urlSave = ipAddr+"/save?deviceId="+getUUID(mContext)+"&speed="+(ContentView.lastScrollAvgSpeed/50)+"&step="+step;
+  final String urlTrain = ipAddr+"/train?deviceId="+getUUID(mContext);
+  final String urlDownload = ipAddr+"/download?fileName="+getUUID(mContext);
+  Toast.makeText(mContext,"tweak",Toast.LENGTH_SHORT).show();
+  new HttpPostThread(urlSave, mContext, handler).start();
+  int lastCount = getCount(mContext);
+  lastCount += 1;
+  //Log.w(TAG,"已反馈次数: %s",lastCount);
+  setCount(mContext,lastCount);
+  if(lastCount % 5 == 0){
+     //Toast.makeText(mContext,"训练",Toast.LENGTH_SHORT).show();
+     new HttpPostThread(urlTrain, mContext, handler).start();
+ }
+ if(lastCount % 6 == 0){
+     Toast.makeText(mContext,"get a new model, restart the switch.",Toast.LENGTH_SHORT).show();
+     new HttpDownloadThread(urlDownload, mContext, handler).start();
+ }
+ ContentView.lastScrollAvgSpeed = 0;
+ return;
+}
 
-      mresetButton = (Button) findViewById(R.id.reset);
-      mresetButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-               initalBushuang = 0;
-               text_bushuang.setText(String.valueOf(initalBushuang));
-               initalFps = 10;
-               fpsText.setText(String.valueOf(initalFps));
-               mContentViewCore.changeFps(initalFps);
-            }
-        });
+//end
+@SuppressWarnings("unused")
+@CalledByNative
+private void onUpdateUrl(String url) {
+    mUrlTextView.setText(url);
+}
+
+@SuppressWarnings("unused")
+@CalledByNative
+private void onLoadProgressChanged(double progress) {
+    removeCallbacks(mClearProgressRunnable);
+    mProgressDrawable.setLevel((int) (10000.0 * progress));
+    if (progress == 1.0) postDelayed(mClearProgressRunnable, COMPLETED_PROGRESS_TIMEOUT_MS);
+}
+
+@CalledByNative
+private void toggleFullscreenModeForTab(boolean enterFullscreen) {
+    mIsFullscreen = enterFullscreen;
+    LinearLayout toolBar = (LinearLayout) findViewById(R.id.toolbar);
+    toolBar.setVisibility(enterFullscreen ? GONE : VISIBLE);
+}
+
+@CalledByNative
+private boolean isFullscreenForTabOrPending() {
+    return mIsFullscreen;
+}
+
+@SuppressWarnings("unused")
+@CalledByNative
+private void setIsLoading(boolean loading) {
+    mLoading = loading;
+    if (mLoading) {
+        mStopReloadButton
+        .setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
+    } else {
+        mStopReloadButton.setImageResource(R.drawable.ic_refresh);
     }
-
-    @SuppressWarnings("unused")
-    @CalledByNative
-    private void onUpdateUrl(String url) {
-        mUrlTextView.setText(url);
-    }
-
-    @SuppressWarnings("unused")
-    @CalledByNative
-    private void onLoadProgressChanged(double progress) {
-        removeCallbacks(mClearProgressRunnable);
-        mProgressDrawable.setLevel((int) (10000.0 * progress));
-        if (progress == 1.0) postDelayed(mClearProgressRunnable, COMPLETED_PROGRESS_TIMEOUT_MS);
-    }
-
-    @CalledByNative
-    private void toggleFullscreenModeForTab(boolean enterFullscreen) {
-        mIsFullscreen = enterFullscreen;
-        LinearLayout toolBar = (LinearLayout) findViewById(R.id.toolbar);
-        toolBar.setVisibility(enterFullscreen ? GONE : VISIBLE);
-    }
-
-    @CalledByNative
-    private boolean isFullscreenForTabOrPending() {
-        return mIsFullscreen;
-    }
-
-    @SuppressWarnings("unused")
-    @CalledByNative
-    private void setIsLoading(boolean loading) {
-        mLoading = loading;
-        if (mLoading) {
-            mStopReloadButton
-                    .setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
-        } else {
-            mStopReloadButton.setImageResource(R.drawable.ic_refresh);
-        }
-    }
+}
 
     /**
      * Initializes the ContentView based on the native tab contents pointer passed in.
@@ -454,7 +491,7 @@ public class Shell extends LinearLayout {
         mContentViewCore = new ContentViewCore(context, "");
         ContentView cv = ContentView.createContentView(context, mContentViewCore);
         mContentViewCore.initialize(ViewAndroidDelegate.createBasicDelegate(cv), cv,
-                webContents, mWindow);
+            webContents, mWindow);
         mContentViewCore.setContentViewClient(mContentViewClient);
         mWebContents = mContentViewCore.getWebContents();
         mNavigationController = mWebContents.getNavigationController();
@@ -463,9 +500,9 @@ public class Shell extends LinearLayout {
             mUrlTextView.setText(mWebContents.getUrl());
         }
         ((FrameLayout) findViewById(R.id.contentview_holder)).addView(cv,
-                new FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT));
+            new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT));
         cv.requestFocus();
         mContentViewRenderView.setCurrentContentViewCore(mContentViewCore);
     }
@@ -519,25 +556,26 @@ public class Shell extends LinearLayout {
      /**
      * @return The {@link WebContents} currently managing the content shown by this Shell.
      */
-    public WebContents getWebContents() {
+     public WebContents getWebContents() {
         return mWebContents;
     }
 
     private void setKeyboardVisibilityForUrl(boolean visible) {
         InputMethodManager imm = (InputMethodManager) getContext().getSystemService(
-                Context.INPUT_METHOD_SERVICE);
+            Context.INPUT_METHOD_SERVICE);
         if (visible) {
             imm.showSoftInput(mUrlTextView, InputMethodManager.SHOW_IMPLICIT);
         } else {
             imm.hideSoftInputFromWindow(mUrlTextView.getWindowToken(), 0);
         }
     }
-
+//my code
     private int getCount(Context context){
-        SharedPreferences sp = context.getSharedPreferences("config",context.MODE_PRIVATE);//参数1是xml文件名
+        SharedPreferences sp = context.getSharedPreferences("config",context.MODE_PRIVATE);
         return sp.getInt("count",0);
     }
-    private void doCount(Context context,int value){
+
+    private void setCount(Context context,int value){
         SharedPreferences sp = context.getSharedPreferences("config",context.MODE_PRIVATE);//参数1是xml文件名
         //参数2是读写文件的权限模式是只有本应用程序可以读写
         SharedPreferences.Editor editor = sp.edit();
@@ -545,18 +583,17 @@ public class Shell extends LinearLayout {
         editor.apply();
     }
 
-public String getUUID(Context context){
-    SharedPreferences sp = context.getSharedPreferences("config",context.MODE_PRIVATE);
-    return sp.getString("uuid","");
-}
-public void setUUID(Context context){
-    SharedPreferences sp = context.getSharedPreferences("config",context.MODE_PRIVATE);
-    SharedPreferences.Editor editor = sp.edit();
-    editor.putString("uuid", UUID.randomUUID().toString());
-    editor.apply();
-}
+    public String getUUID(Context context){
+        SharedPreferences sp = context.getSharedPreferences("config",context.MODE_PRIVATE);
+        return sp.getString("uuid","");
+    }
 
-
-
+    public void setUUID(Context context){
+        SharedPreferences sp = context.getSharedPreferences("config",context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sp.edit();
+        editor.putString("uuid", UUID.randomUUID().toString());
+        editor.apply();
+    }
+//end
     private static native void nativeCloseShell(long shellPtr);
 }

@@ -66,8 +66,10 @@ class InputHandlerProxy
       const LatencyInfo& latency_info,
       const EventDispositionCallback& callback);
   EventDisposition HandleInputEvent(const blink::WebInputEvent& event);
-/**********************************************************************************************************/
- void HandleInputModelMsg(std::string msg, int routing_id,int speed);
+
+ //my code
+  void HandleInputModelStrMsg(int routing_id, std::string model);
+  void HandleInputModelParamsMsg(int routing_id, int speed, float entropy);
 
   // cc::InputHandlerClient implementation.
   void WillShutdown() override;

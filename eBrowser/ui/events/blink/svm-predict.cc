@@ -60,7 +60,7 @@ namespace svmpredict {
         ++i;
         x[i].index = -1;
         predict_label = svm_predict(model,x);
-	svm_free_and_destroy_model(&model);
+	    svm_free_and_destroy_model(&model);
         free(x);
         return predict_label;
     }

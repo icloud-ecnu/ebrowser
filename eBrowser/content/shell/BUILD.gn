@@ -11,6 +11,7 @@ import("//media/media_options.gni")
 import("//mojo/public/tools/bindings/mojom.gni")
 import("//tools/grit/repack.gni")
 import("//tools/grit/grit_rule.gni")
+#Configuration of Android
 if (is_android) {
   import("//build/config/android/config.gni")
 } else if (is_mac) {
@@ -21,7 +22,7 @@ if (is_android) {
 } else if (is_win) {
   import("//build/win/syzygy/syzygy.gni")
 }
-
+# APP Name
 declare_args() {
   content_shell_product_name = "Content Shell"
   content_shell_version = "99.77.34.5"

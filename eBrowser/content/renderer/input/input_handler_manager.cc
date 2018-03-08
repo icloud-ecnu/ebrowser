@@ -197,21 +197,27 @@ void InputHandlerManager::ProcessRafAlignedInputOnMainThread(int routing_id) {
   client_->ProcessRafAlignedInput(routing_id);
 }
 
-void InputHandlerManager::HandleInputModelInfoMsg(int routing_id,std::string msg,int speed)
+
+//my code
+void InputHandlerManager::HandleInputModelStrMsg(int routing_id,std::string model)
 {
   auto it = input_handlers_.find(routing_id);
-  if (it == input_handlers_.end()) {
-    
-    // Oops, we no longer have an interested input handler..
-    
+  if (it == input_handlers_.end()) { 
     return;
   }
-  //return;//temp add
-
   InputHandlerProxy* proxy = it->second->input_handler_proxy();
-   proxy->HandleInputModelMsg(msg,routing_id,speed);
+  proxy->HandleInputModelStrMsg(routing_id,model);
 }
 
+void InputHandlerManager::HandleInputModelParamsMsg(int routing_id, int speed, float entropy){
+  auto it = input_handlers_.find(routing_id);
+  if (it == input_handlers_.end()) {
+    return;
+  }
+  InputHandlerProxy* proxy = it->second->input_handler_proxy();
+  proxy->HandleInputModelParamsMsg(routing_id, speed, entropy);
+}
+//end
 
 void InputHandlerManager::HandleInputEvent(
     int routing_id,

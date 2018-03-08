@@ -149,9 +149,14 @@ class ContentViewCoreImpl : public ContentViewCore,
                    jfloat hintx,
                    jfloat hinty,
                    jboolean target_viewport);
-  void ScrollBegin1(JNIEnv* env,
+  //my code
+  void SendModelStr(JNIEnv* env,
                    const base::android::JavaParamRef<jobject>& obj,                
-                   const base::android::JavaParamRef<jstring>& caonima,jlong speed);
+                   const base::android::JavaParamRef<jstring>& model);
+  void SendModelParams(JNIEnv* env,
+                   const base::android::JavaParamRef<jobject>& obj, jlong speed, jfloat entropy);
+  //end
+
   void ScrollEnd(JNIEnv* env,
                  const base::android::JavaParamRef<jobject>& obj,
                  jlong time_ms);
