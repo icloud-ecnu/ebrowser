@@ -15,3 +15,14 @@ The browser side of ebrowser framework is developed base on [The Chromium Projec
 ### 1.External Dependencies
 
 Before using our framework, you should get the code of Chromium for Android first. The instructions of checking out, building,& running Chromium is [here](https://chromium.googlesource.com/chromium/src/+/master/docs/android_build_instructions.md).
+
+### 2.Compiling
+
+Replace content & ui compotents in src/ directory of Chromium project with ebrowser-cloud/ebrowser/content & ui. Build [Content shell](https://chromium.googlesource.com/chromium/src/+/master/docs/android_build_instructions.md#Build-Content-shell) as the browser side of eBrowser.
+
+```
+ninja -C out/Default content_shell_apk
+out/Default/bin/content_shell_apk instal
+```
+### 3.Deploying the cloud side
+Just deploy it as any other Spring project.
