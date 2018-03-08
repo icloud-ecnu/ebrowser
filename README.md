@@ -11,3 +11,7 @@ ebrowser comprises the remote cloud side and the local browser side. The cloud s
 ## Setup,Compiling and Configuration
 
 The browser side of ebrowser framework is developed base on [The Chromium Projects](https://www.chromium.org). The project version is 56.
+
+### 1.External Dependencies
+
+Before using our framework, you should get the code of Chromium for Android first. The instructions of checking out, building,& running Chromium is [here](https://chromium.googlesource.com/chromium/src/+/master/docs/android_build_instructions.md).
