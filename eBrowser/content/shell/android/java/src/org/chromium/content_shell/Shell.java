@@ -383,6 +383,11 @@ public class Shell extends LinearLayout {
                File file = new File(personalizedModel);
                if(!file.exists()){
                   file = new File(sharedModel);
+                  if(!file.exists()){
+                    final String urlDownload = ipAddr+"/download?fileName=model";
+                    new HttpDownloadThread(urlDownload, mContext, handler).start();
+                    return;
+                  }
               }
               BufferedReader buf = new BufferedReader(new FileReader(file));	     
               while(( line = buf.readLine() ) != null )

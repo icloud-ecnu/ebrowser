@@ -59,7 +59,7 @@ public class HttpDownloadThread extends Thread{
                     @Override
                     public void run() {
                      Log.w(TAG, "end-time: %s ", System.currentTimeMillis());
-                     Toast.makeText(mContext,"model downloading success",Toast.LENGTH_SHORT).show();
+                     Toast.makeText(mContext,"a new model is available, restart the switch.",Toast.LENGTH_SHORT).show();
                  }
              });
             } catch (IOException e) {
