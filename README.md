@@ -26,3 +26,6 @@ out/Default/bin/content_shell_apk instal
 ```
 ### 3.Deploying the cloud side
 Just deploy it as any other Spring project.
+
+# Publication
+Fei Xu, Shuai Yang, Zhi Zhou, Jia Rao, “eBrowser: Making Human-Mobile Web Interactions Energy Efficient with Event Rate Learning,” in: Proc. of ICDCS 2018 (Research Track), Vienna, Austria, July 2-5, 2018.
