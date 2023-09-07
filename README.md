@@ -28,4 +28,15 @@ out/Default/bin/content_shell_apk instal
 Just deploy it as any other Spring project.
 
 # Publication
-Fei Xu, Shuai Yang, Zhi Zhou, Jia Rao, “eBrowser: Making Human-Mobile Web Interactions Energy Efficient with Event Rate Learning,” in: Proc. of ICDCS 2018 (Research Track), Vienna, Austria, July 2-5, 2018.
+Fei Xu, Shuai Yang, Zhi Zhou, Jia Rao, “[eBrowser: Making Human-Mobile Web Interactions Energy Efficient with Event Rate Learning](https://ieeexplore.ieee.org/document/8416321),” in: Proc. of ICDCS 2018 (Research Track), Vienna, Austria, July 2-5, 2018.
+
+```
+@inproceedings{xu2018ebrowser,
+  title={ebrowser: Making human-mobile web interactions energy efficient with event rate learning},
+  author={Xu, Fei and Yang, Shuai and Zhou, Zhi and Rao, Jia},
+  booktitle={2018 IEEE 38th International Conference on Distributed Computing Systems (ICDCS)},
+  pages={523--533},
+  year={2018},
+  organization={IEEE}
+}
+```
